@@ -1,0 +1,14 @@
+{
+  "name": "app",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "It me, but 🤖",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@copilot-extensions/preview-sdk": "^1.0.0",
+    "@octokit/core": "^6.1.2"
+  }
+}
