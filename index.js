@@ -1,5 +1,6 @@
 // @ts-check
 
+import { inspect } from "node:util";
 import { createServer, ServerResponse } from "node:http";
 
 import { Octokit } from "@octokit/core";
@@ -39,11 +40,103 @@ const server = createServer(async (request, response) => {
     response.end(`FATAL: error while verifying request`);
     return;
   }
+  console.log("Request verified");
 
+  // Acknowledge the request
+  response.write(createAckEvent().toString());
+  console.log("Request acknowledged");
+
+  // get user info
   const octokit = new Octokit({ auth: tokenForUser });
   const { data: user } = await octokit.request("GET /user");
 
-  sayHi(response, user.login);
+  // get user's last message
+  const input = JSON.parse(body);
+  console.log(inspect(input, { depth: Infinity }));
+  const lastMessage = input.messages[input.messages.length - 1];
+
+  if (lastMessage.copilot_confirmations?.length) {
+    // send text acknoledging the confirmation choice
+    response.write(
+      createTextEvent(
+        `ok, @${user.login}, ${lastMessage.copilot_confirmations[0].state}!`
+      ).toString()
+    );
+    console.log("Text response acknoledging the confirmation choice sent");
+  } else if (/confirm/i.test(lastMessage.content)) {
+    // send a confirmation message
+    response.write(
+      createConfirmationEvent({
+        title: `Are you @${user.login}?`,
+        message: "Just making sure",
+        id: "1",
+      }).toString()
+    );
+    console.log("Confirmation response sent");
+  } else if (/reference/i.test(lastMessage.content)) {
+    response.write(
+      createTextEvent(`ok, @${user.login}, a reference is incoming:`).toString()
+    );
+    // send a reference
+    response.write(
+      createReferencesEvent([
+        {
+          type: "blackbeard.story",
+          id: "snippet",
+          data: {
+            file: "story.go",
+            start: "0",
+            end: "13",
+            content: "func main()...writeStory()...",
+          },
+          is_implicit: false,
+          metadata: {
+            display_name: "Lines 1-13 from story.go",
+            display_icon: "icon",
+            display_url: "http://blackbeard.com/story/1",
+          },
+        },
+      ]).toString()
+    );
+    console.log("Reference response sent");
+  } else if (/error/i.test(lastMessage.content)) {
+    response.write(
+      createTextEvent(`ok, @${user.login}, here are some errors:`).toString()
+    );
+    // send errors
+    const referenceError = {
+      type: "reference",
+      code: "1",
+      message: "test reference error",
+      identifier: "reference-identifier",
+    };
+    const functionError = {
+      type: "function",
+      code: "1",
+      message: "test function error",
+      identifier: "function-identifier",
+    };
+    const agentError = {
+      type: "agent",
+      code: "1",
+      message: "test agent error",
+      identifier: "agent-identifier",
+    };
+    response.write(
+      // @ts-expect-error
+      createErrorsEvent([referenceError, functionError, agentError]).toString()
+    );
+    console.log("Confirmation response sent");
+  } else {
+    // send a text message
+    response.write(createTextEvent(`Hello, @${user.login}!`).toString());
+    console.log("Text response sent");
+  }
+
+  // close the connection
+  response.end(createDoneEvent().toString());
+
+  console.log("Socket closed");
 });
 
 server.listen(3000);
@@ -64,20 +157,90 @@ function getBody(request) {
   });
 }
 
-/**
- *
- * @param {ServerResponse} response
- */
-function sayHi(response, login) {
-  const lines = [
-    {
+function createAckEvent() {
+  return {
+    data: {
       choices: [
         {
-          delta: { content: `Hi there, @${login}!?`, role: "assistant" },
+          delta: { content: ``, role: "assistant" },
         },
       ],
     },
-    {
+    toString() {
+      return `data: ${JSON.stringify(this.data)}\n\n`;
+    },
+  };
+}
+
+/**
+ * @param {string} message
+ * @returns {import('./types').ResponseEvent<"text">}
+ */
+function createTextEvent(message) {
+  return {
+    data: {
+      choices: [
+        {
+          delta: { content: message, role: "assistant" },
+        },
+      ],
+    },
+    toString() {
+      return `data: ${JSON.stringify(this.data)}\n\n`;
+    },
+  };
+}
+
+/**
+ * @param {import('./types').CreateConfirmationEventOptions} options
+ * @returns {import('./types').ResponseEvent<"copilot_confirmation">}
+ */
+function createConfirmationEvent({ id, title, message, metadata }) {
+  return {
+    event: "copilot_confirmation",
+    data: {
+      type: "action",
+      title,
+      message,
+      confirmation: { id, ...metadata },
+    },
+    toString() {
+      return `event: ${this.event}\ndata: ${JSON.stringify(this.data)}\n\n`;
+    },
+  };
+}
+
+/**
+ * @param {import('./types').CopilotReference[]} references
+ * @returns {import('./types').ResponseEvent<"copilot_references">}
+ */
+function createReferencesEvent(references) {
+  return {
+    event: "copilot_references",
+    data: references,
+    toString() {
+      return `event: ${this.event}\ndata: ${JSON.stringify(this.data)}\n\n`;
+    },
+  };
+}
+
+/**
+ * @param {import('./types').CopilotError[]} errors
+ * @returns {import('./types').ResponseEvent<"copilot_errors">}
+ */
+function createErrorsEvent(errors) {
+  return {
+    event: "copilot_errors",
+    data: errors,
+    toString() {
+      return `event: ${this.event}\ndata: ${JSON.stringify(this.data)}\n\n`;
+    },
+  };
+}
+
+function createDoneEvent() {
+  return {
+    data: {
       choices: [
         {
           finish_reason: "stop",
@@ -85,12 +248,8 @@ function sayHi(response, login) {
         },
       ],
     },
-  ];
-
-  for (const line of lines) {
-    response.write(`data: ${JSON.stringify(line)}\n\n`);
-  }
-
-  response.write("data: [DONE]\n\n");
-  response.end();
+    toString() {
+      return `data: ${JSON.stringify(this.data)}\n\ndata: [DONE]\n\n`;
+    },
+  };
 }
