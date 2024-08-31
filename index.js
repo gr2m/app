@@ -4,7 +4,7 @@ import { inspect } from "node:util";
 import { createServer, ServerResponse } from "node:http";
 
 import { Octokit } from "@octokit/core";
-import { verify } from "@copilot-extensions/preview-sdk";
+import { verifyRequestByKeyId } from "@copilot-extensions/preview-sdk";
 
 // Create a local server to receive data from
 const server = createServer(async (request, response) => {
@@ -25,7 +25,7 @@ const server = createServer(async (request, response) => {
   const tokenForUser = String(request.headers["x-github-token"]);
 
   try {
-    const isValidRequest = await verify(body, signature, keyID, {
+    const isValidRequest = await verifyRequestByKeyId(body, signature, keyID, {
       token: tokenForUser,
     });
 
