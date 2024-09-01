@@ -4,15 +4,18 @@ import { inspect } from "node:util";
 import { createServer, ServerResponse } from "node:http";
 
 import { Octokit } from "@octokit/core";
-import { verifyRequestByKeyId } from "@copilot-extensions/preview-sdk";
+import {
+  verifyRequestByKeyId,
+  createAckEvent,
+  createConfirmationEvent,
+  createDoneEvent,
+  createReferencesEvent,
+  createTextEvent,
+  createErrorsEvent,
+} from "@copilot-extensions/preview-sdk";
 
 // Create a local server to receive data from
 const server = createServer(async (request, response) => {
-  console.log(request.method, request.url, {
-    ...request.headers,
-    "x-github-token": "REDACTED",
-  });
-
   if (request.method === "GET") {
     response.statusCode = 200;
     response.end(`Hello, there!`);
@@ -51,9 +54,24 @@ const server = createServer(async (request, response) => {
   const { data: user } = await octokit.request("GET /user");
 
   // get user's last message
-  const input = JSON.parse(body);
+  const input = parseRequestBody(body);
   console.log(inspect(input, { depth: Infinity }));
   const lastMessage = input.messages[input.messages.length - 1];
+
+  // debug log
+  // console.log(
+  //   JSON.stringify(
+  //     {
+  //       headers: {
+  //         ...request.headers,
+  //         "x-github-token": "REDACTED",
+  //       },
+  //       body: input,
+  //     },
+  //     null,
+  //     2
+  //   )
+  // );
 
   if (lastMessage.copilot_confirmations?.length) {
     // send text acknoledging the confirmation choice
@@ -157,99 +175,11 @@ function getBody(request) {
   });
 }
 
-function createAckEvent() {
-  return {
-    data: {
-      choices: [
-        {
-          delta: { content: ``, role: "assistant" },
-        },
-      ],
-    },
-    toString() {
-      return `data: ${JSON.stringify(this.data)}\n\n`;
-    },
-  };
-}
-
 /**
- * @param {string} message
- * @returns {import('./types').ResponseEvent<"text">}
+ *
+ * @param {string} body
+ * @returns {import("./types").CopilotRequestPayload}
  */
-function createTextEvent(message) {
-  return {
-    data: {
-      choices: [
-        {
-          delta: { content: message, role: "assistant" },
-        },
-      ],
-    },
-    toString() {
-      return `data: ${JSON.stringify(this.data)}\n\n`;
-    },
-  };
-}
-
-/**
- * @param {import('./types').CreateConfirmationEventOptions} options
- * @returns {import('./types').ResponseEvent<"copilot_confirmation">}
- */
-function createConfirmationEvent({ id, title, message, metadata }) {
-  return {
-    event: "copilot_confirmation",
-    data: {
-      type: "action",
-      title,
-      message,
-      confirmation: { id, ...metadata },
-    },
-    toString() {
-      return `event: ${this.event}\ndata: ${JSON.stringify(this.data)}\n\n`;
-    },
-  };
-}
-
-/**
- * @param {import('./types').CopilotReference[]} references
- * @returns {import('./types').ResponseEvent<"copilot_references">}
- */
-function createReferencesEvent(references) {
-  return {
-    event: "copilot_references",
-    data: references,
-    toString() {
-      return `event: ${this.event}\ndata: ${JSON.stringify(this.data)}\n\n`;
-    },
-  };
-}
-
-/**
- * @param {import('./types').CopilotError[]} errors
- * @returns {import('./types').ResponseEvent<"copilot_errors">}
- */
-function createErrorsEvent(errors) {
-  return {
-    event: "copilot_errors",
-    data: errors,
-    toString() {
-      return `event: ${this.event}\ndata: ${JSON.stringify(this.data)}\n\n`;
-    },
-  };
-}
-
-function createDoneEvent() {
-  return {
-    data: {
-      choices: [
-        {
-          finish_reason: "stop",
-          delta: { content: null },
-        },
-      ],
-    },
-    toString() {
-      return `data: ${JSON.stringify(this.data)}\n\ndata: [DONE]\n\n`;
-    },
-  };
+function parseRequestBody(body) {
+  return JSON.parse(body);
 }

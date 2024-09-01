@@ -1,0 +1,79 @@
+{
+  "headers": {
+    "host": "localhost:3000",
+    "user-agent": "Go-http-client/2.0",
+    "accept-encoding": "gzip",
+    "x-request-id": "330d2e40a012d0013c7c5157c7f024f7",
+    "x-real-ip": "10.240.3.196",
+    "x-forwarded-port": "443",
+    "x-forwarded-scheme": "https",
+    "x-original-uri": "/",
+    "x-scheme": "https",
+    "x-github-token": "REDACTED",
+    "github-public-key-identifier": "4fe6b016179b74078ade7581abf4e84fb398c6fae4fb973972235b84fcd70ca3",
+    "github-public-key-signature": "MEYCIQCl3FDaPvZ7Euk3FD0gnW2fWULftzAzSpVsStEHeOisrgIhAPwowA79QzomUNtItn3ZSGae1wU8t3WidCdishM0tSdg",
+    "x-original-proto": "https",
+    "x-forwarded-proto": "https",
+    "x-forwarded-host": "sr9q1rnr-3000.usw3.devtunnels.ms",
+    "x-forwarded-for": "10.240.3.196",
+    "proxy-connection": "Keep-Alive",
+    "content-type": "application/json",
+    "content-length": "1103"
+  },
+  "body": {
+    "copilot_thread_id": "795acbc7-9afd-4f6c-a018-d0464266caba",
+    "messages": [
+      {
+        "role": "user",
+        "content": "@gr2m error",
+        "copilot_references": [],
+        "copilot_confirmations": null
+      },
+      {
+        "role": "assistant",
+        "content": "ok, @gr2m, here are some errors:",
+        "copilot_references": [
+          {
+            "type": "github.agent",
+            "data": {
+              "type": "github.agent",
+              "id": 181,
+              "login": "gr2m",
+              "avatarURL": "https://avatars.githubusercontent.com/in/10115?s=60&u=780f9fbc88605fe8b86b6f9b83879509efff0262&v=4",
+              "url": "https://github.com/apps/gr2m"
+            },
+            "id": "181",
+            "is_implicit": false,
+            "metadata": {
+              "display_name": "181",
+              "display_icon": "",
+              "display_url": ""
+            }
+          }
+        ],
+        "copilot_confirmations": null
+      },
+      {
+        "role": "user",
+        "content": "Current Date and Time (UTC): 2024-08-31 23:38:13\nUser's Current URL: https://github.com/copilot/c/795acbc7-9afd-4f6c-a018-d0464266caba\nCurrent User's Login: gr2m\n",
+        "name": "_session",
+        "copilot_references": [],
+        "copilot_confirmations": null
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "copilot_references": [],
+        "copilot_confirmations": []
+      }
+    ],
+    "stop": null,
+    "top_p": 0,
+    "temperature": 0,
+    "max_tokens": 0,
+    "presence_penalty": 0,
+    "frequency_penalty": 0,
+    "copilot_skills": null,
+    "agent": "gr2m"
+  }
+}

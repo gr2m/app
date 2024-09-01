@@ -1,70 +1,81 @@
-export type ResponseEventType = "ack" | "done" | "text" | "copilot_references" | "copilot_confirmation" | "copilot_errors"
-export type ResponseEvent<T extends ResponseEventType = "text"> = T extends "text" | "ack" | "done" ? {
-  data: T extends "ack" ? CopilotAckResponseEventData : T extends "done" ? CopilotDoneResponseEventData : T extends "text" ? CopilotTextResponseEventData : never
-  toString: () => string
-} : {
-  event: T
-  data: T extends "copilot_references" ? CopilotReferenceResponseEventData : T extends "copilot_confirmation" ? CopilotConfirmationResponseEventData : T extends "copilot_errors" ? CopilotErrorsResponseEventData : never
-  toString: () => string
+export interface CopilotRequest {
+  headers: CopilotRequestHeaders
+  payload: CopilotRequestPayload
 }
 
-export type CopilotAckResponseEventData = {
-  choices: [{
-    delta: {
-      content: "", role: "assistant"
-    }
-  }]
-}
-export type CopilotDoneResponseEventData = {
-  choices: [{
-    finish_reason: "stop"
-    delta: {
-      content: "", role: "assistant"
-    }
-  }]
-}
-export type CopilotTextResponseEventData = {
-  choices: [{
-    delta: {
-      content: string, role: "assistant"
-    }
-  }]
-}
-export type CopilotConfirmationResponseEventData = {
-  type: 'action'; // Currently, 'action' is the only supported type
-  title: string;
-  message: string;
-  confirmation?: {
-    id: string;
-    [key: string]: any;
-  };
-}
-export type CopilotErrorsResponseEventData = CopilotError[]
-export type CopilotReferenceResponseEventData = CopilotReference[]
-export type CreateConfirmationEventOptions = {
-  id: string;
-  title: string;
-  message: string;
-  metadata?: Record<string, unknown>;
+export interface CopilotRequestHeaders {
+  "x-github-token": string
+  "github-public-key-identifier": string
+  "github-public-key-signature": string
 }
 
-export type CopilotError = {
-  type: "reference" | "function" | "agent";
-  code: string;
-  message: string;
-  identifier: string;
+export interface CopilotRequestPayload {
+  copilot_thread_id: string
+  messages: Message[]
+  stop: any
+  top_p: number
+  temperature: number
+  max_tokens: number
+  presence_penalty: number
+  frequency_penalty: number
+  copilot_skills: any[]
+  agent: string
+}
+
+export interface Message {
+  role: string
+  content: string
+  copilot_references: CopilotReference[]
+  copilot_confirmations?: CopilotConfirmation[]
+  name?: string
 }
 
 export interface CopilotReference {
-  type: string;
-  id: string;
-  data?: {
-    [key: string]: unknown;
-  };
-  is_implicit?: boolean;
-  metadata?: {
-    display_name: string;
-    display_icon?: string;
-    display_url?: string;
-  };
+  type: string
+  data: CopilotReferenceData
+  id: string
+  is_implicit: boolean
+  metadata: CopilotReferenceMetadata
+}
+
+export interface CopilotReferenceData {
+  type: string
+  id: number
+  name?: string
+  ownerLogin?: string
+  ownerType?: string
+  readmePath?: string
+  description?: string
+  commitOID?: string
+  ref?: string
+  refInfo?: CopilotReferenceDataRefInfo
+  visibility?: string
+  languages?: CopilotReferenceDataLanguage[]
+  login?: string
+  avatarURL?: string
+  url?: string
+}
+
+export interface CopilotReferenceDataRefInfo {
+  name: string
+  type: string
+}
+
+export interface CopilotReferenceDataLanguage {
+  name: string
+  percent: number
+}
+
+export interface CopilotReferenceMetadata {
+  display_name: string
+  display_icon: string
+  display_url: string
+}
+
+export interface CopilotConfirmation {
+  state: string
+  confirmation: {
+    id: string
+    [key: string]: unknown
+  }
 }
