@@ -3,55 +3,6 @@
     "host": "localhost:3000",
     "user-agent": "Go-http-client/2.0",
     "accept-encoding": "gzip",
-    "x-request-id": "7f58ff97668ea30600c0d73b600c3dee",
-    "x-real-ip": "10.240.0.199",
-    "x-forwarded-port": "443",
-    "x-forwarded-scheme": "https",
-    "x-original-uri": "/",
-    "x-scheme": "https",
-    "x-github-token": "REDACTED",
-    "github-public-key-identifier": "4fe6b016179b74078ade7581abf4e84fb398c6fae4fb973972235b84fcd70ca3",
-    "github-public-key-signature": "MEQCIHbjC4ZGrMfwPwi9letiA1i1v9jfhf7XDyqQFiDBMS5rAiAXlTzFuJ/wiXvLIMe2i+Bng6h+LFGbTFEILLa58pbV6w==",
-    "x-original-proto": "https",
-    "x-forwarded-proto": "https",
-    "x-forwarded-host": "sr9q1rnr-3000.usw3.devtunnels.ms",
-    "x-forwarded-for": "10.240.0.199",
-    "proxy-connection": "Keep-Alive",
-    "content-type": "application/json",
-    "content-length": "519"
-  },
-  "body": {
-    "copilot_thread_id": "2a432604-5005-4636-95d5-7b6809960625",
-    "messages": [
-      {
-        "role": "user",
-        "content": "Current Date and Time (UTC): 2024-08-31 23:35:41\nUser's Current URL: https://github.com/copilot\nCurrent User's Login: gr2m\n",
-        "name": "_session",
-        "copilot_references": [],
-        "copilot_confirmations": null
-      },
-      {
-        "role": "user",
-        "content": "confirm",
-        "copilot_references": [],
-        "copilot_confirmations": []
-      }
-    ],
-    "stop": null,
-    "top_p": 0,
-    "temperature": 0,
-    "max_tokens": 0,
-    "presence_penalty": 0,
-    "frequency_penalty": 0,
-    "copilot_skills": null,
-    "agent": "gr2m"
-  }
-}
-{
-  "headers": {
-    "host": "localhost:3000",
-    "user-agent": "Go-http-client/2.0",
-    "accept-encoding": "gzip",
     "x-request-id": "581a7d327b1f38bfeec1e3c4d37c0a64",
     "x-real-ip": "10.240.4.161",
     "x-forwarded-port": "443",

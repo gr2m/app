@@ -4,13 +4,15 @@ import { createServer } from "node:http";
 
 import { Octokit } from "@octokit/core";
 import {
-  verifyRequestByKeyId,
   createAckEvent,
   createConfirmationEvent,
   createDoneEvent,
   createReferencesEvent,
   createTextEvent,
   createErrorsEvent,
+  verifyAndParseRequest,
+  getUserMessage,
+  getUserConfirmation,
 } from "@copilot-extensions/preview-sdk";
 
 // Create a local server to receive data from
@@ -74,7 +76,9 @@ const server = createServer(async (request, response) => {
     // send text acknoledging the confirmation choice
     response.write(
       createTextEvent(
-        `ok, @${user.login}, ${userConfirmation.state}!`
+        `ok, @${user.login}, ${
+          userConfirmation.accepted ? "accepted" : "dismissed"
+        }!`
       ).toString()
     );
     console.log(
@@ -173,80 +177,4 @@ function getBody(request) {
         resolve(body);
       });
   });
-}
-
-/**
- * @param {string} body
- * @returns {import("./types").CopilotRequestPayload}
- */
-function parseRequestBody(body) {
-  return JSON.parse(body);
-}
-
-/**
- * @param {import("./types").CopilotRequestPayload} payload
- * @returns {import("./types").OpenAICompatibilityPayload}
- */
-function transformPayloadForOpenAICompatibility(payload) {
-  return {
-    messages: payload.messages.map((message) => {
-      return {
-        role: message.role,
-        name: message.name,
-        content: message.content,
-      };
-    }),
-  };
-}
-
-/**
- * @param {string} body
- * @param {string} signature
- * @param {string} keyID
- * @param {any} options
- * @returns {Promise<{isValidRequest: boolean, payload: import("./types").CopilotRequestPayload}>}
- */
-async function verifyAndParseRequest(body, signature, keyID, options) {
-  const isValidRequest = await verifyRequestByKeyId(
-    body,
-    signature,
-    keyID,
-    options
-  );
-
-  return {
-    isValidRequest,
-    payload: parseRequestBody(body),
-  };
-}
-
-/**
- * Get the text from the user's last message to the agent
- *
- * @param {import("./types").CopilotRequestPayload} payload
- * @returns {string}
- */
-function getUserMessage(payload) {
-  return payload.messages[payload.messages.length - 1].content;
-}
-
-/**
- * Get the text from the user's last message to the agent
- *
- * @param {import("./types").CopilotRequestPayload} payload
- * @returns {{accepted: boolean, id?: string, metadata: Record<string, unknown>} | undefined}
- */
-function getUserConfirmation(payload) {
-  const confirmation =
-    payload.messages[payload.messages.length - 1].copilot_confirmations?.[0];
-
-  if (!confirmation) return;
-
-  const { id, ...metadata } = confirmation.confirmation;
-
-  return {
-    accepted: confirmation.state === "accepted",
-    id,
-    metadata,
-  };
 }
