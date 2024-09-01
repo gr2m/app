@@ -1,7 +1,6 @@
 // @ts-check
 
-import { inspect } from "node:util";
-import { createServer, ServerResponse } from "node:http";
+import { createServer } from "node:http";
 
 import { Octokit } from "@octokit/core";
 import {
@@ -27,36 +26,14 @@ const server = createServer(async (request, response) => {
   const keyID = String(request.headers["github-public-key-identifier"]);
   const tokenForUser = String(request.headers["x-github-token"]);
 
-  try {
-    const isValidRequest = await verifyRequestByKeyId(body, signature, keyID, {
+  const { isValidRequest, payload } = await verifyAndParseRequest(
+    body,
+    signature,
+    keyID,
+    {
       token: tokenForUser,
-    });
-
-    if (!isValidRequest) {
-      response.statusCode = 401;
-      response.end(`Signature verification failed`);
-      return;
     }
-  } catch (error) {
-    console.error("Error while verifying request", error);
-    response.statusCode = 500;
-    response.end(`FATAL: error while verifying request`);
-    return;
-  }
-  console.log("Request verified");
-
-  // Acknowledge the request
-  response.write(createAckEvent().toString());
-  console.log("Request acknowledged");
-
-  // get user info
-  const octokit = new Octokit({ auth: tokenForUser });
-  const { data: user } = await octokit.request("GET /user");
-
-  // get user's last message
-  const input = parseRequestBody(body);
-  console.log(inspect(input, { depth: Infinity }));
-  const lastMessage = input.messages[input.messages.length - 1];
+  );
 
   // debug log
   // console.log(
@@ -73,15 +50,38 @@ const server = createServer(async (request, response) => {
   //   )
   // );
 
-  if (lastMessage.copilot_confirmations?.length) {
+  if (!isValidRequest) {
+    response.statusCode = 401;
+    response.end(`Signature verification failed`);
+    return;
+  }
+
+  console.log("Request verified and parsed");
+
+  // Acknowledge the request
+  response.write(createAckEvent().toString());
+  console.log("Request acknowledged");
+
+  // get user info
+  const octokit = new Octokit({ auth: tokenForUser });
+  const { data: user } = await octokit.request("GET /user");
+
+  // get user's last message
+  const userConfirmation = getUserConfirmation(payload);
+  const userMessage = getUserMessage(payload);
+
+  if (userConfirmation) {
     // send text acknoledging the confirmation choice
     response.write(
       createTextEvent(
-        `ok, @${user.login}, ${lastMessage.copilot_confirmations[0].state}!`
+        `ok, @${user.login}, ${userConfirmation.state}!`
       ).toString()
     );
-    console.log("Text response acknoledging the confirmation choice sent");
-  } else if (/confirm/i.test(lastMessage.content)) {
+    console.log(
+      "Text response acknowledged the confirmation choice sent",
+      userConfirmation
+    );
+  } else if (/confirm/i.test(userMessage)) {
     // send a confirmation message
     response.write(
       createConfirmationEvent({
@@ -91,7 +91,7 @@ const server = createServer(async (request, response) => {
       }).toString()
     );
     console.log("Confirmation response sent");
-  } else if (/reference/i.test(lastMessage.content)) {
+  } else if (/reference/i.test(userMessage)) {
     response.write(
       createTextEvent(`ok, @${user.login}, a reference is incoming:`).toString()
     );
@@ -117,7 +117,7 @@ const server = createServer(async (request, response) => {
       ]).toString()
     );
     console.log("Reference response sent");
-  } else if (/error/i.test(lastMessage.content)) {
+  } else if (/error/i.test(userMessage)) {
     response.write(
       createTextEvent(`ok, @${user.login}, here are some errors:`).toString()
     );
@@ -176,10 +176,77 @@ function getBody(request) {
 }
 
 /**
- *
  * @param {string} body
  * @returns {import("./types").CopilotRequestPayload}
  */
 function parseRequestBody(body) {
   return JSON.parse(body);
+}
+
+/**
+ * @param {import("./types").CopilotRequestPayload} payload
+ * @returns {import("./types").OpenAICompatibilityPayload}
+ */
+function transformPayloadForOpenAICompatibility(payload) {
+  return {
+    messages: payload.messages.map((message) => {
+      return {
+        role: message.role,
+        name: message.name,
+        content: message.content,
+      };
+    }),
+  };
+}
+
+/**
+ * @param {string} body
+ * @param {string} signature
+ * @param {string} keyID
+ * @param {any} options
+ * @returns {Promise<{isValidRequest: boolean, payload: import("./types").CopilotRequestPayload}>}
+ */
+async function verifyAndParseRequest(body, signature, keyID, options) {
+  const isValidRequest = await verifyRequestByKeyId(
+    body,
+    signature,
+    keyID,
+    options
+  );
+
+  return {
+    isValidRequest,
+    payload: parseRequestBody(body),
+  };
+}
+
+/**
+ * Get the text from the user's last message to the agent
+ *
+ * @param {import("./types").CopilotRequestPayload} payload
+ * @returns {string}
+ */
+function getUserMessage(payload) {
+  return payload.messages[payload.messages.length - 1].content;
+}
+
+/**
+ * Get the text from the user's last message to the agent
+ *
+ * @param {import("./types").CopilotRequestPayload} payload
+ * @returns {{accepted: boolean, id?: string, metadata: Record<string, unknown>} | undefined}
+ */
+function getUserConfirmation(payload) {
+  const confirmation =
+    payload.messages[payload.messages.length - 1].copilot_confirmations?.[0];
+
+  if (!confirmation) return;
+
+  const { id, ...metadata } = confirmation.confirmation;
+
+  return {
+    accepted: confirmation.state === "accepted",
+    id,
+    metadata,
+  };
 }

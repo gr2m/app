@@ -22,6 +22,14 @@ export interface CopilotRequestPayload {
   agent: string
 }
 
+export interface OpenAICompatibilityPayload {
+  messages: {
+    role: string
+    name?: string
+    content: string
+  }[]
+}
+
 export interface Message {
   role: string
   content: string
@@ -73,7 +81,7 @@ export interface CopilotReferenceMetadata {
 }
 
 export interface CopilotConfirmation {
-  state: string
+  state: "dismissed" | "accepted"
   confirmation: {
     id: string
     [key: string]: unknown
