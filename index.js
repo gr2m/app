@@ -13,7 +13,30 @@ import {
   verifyAndParseRequest,
   getUserMessage,
   getUserConfirmation,
+  prompt,
 } from "@copilot-extensions/preview-sdk";
+
+const functions = [
+  {
+    type: /** @type {const} */ ("function"),
+    function: {
+      name: "get_delivery_date",
+      description:
+        "Get the delivery date for a customer's order. Call this whenever you need to know the delivery date, for example when a customer asks 'Where is my package'",
+      parameters: {
+        type: "object",
+        properties: {
+          order_id: {
+            type: "string",
+            description: "The customer's order ID.",
+          },
+        },
+        required: ["order_id"],
+        additionalProperties: false,
+      },
+    },
+  },
+];
 
 // Create a local server to receive data from
 const server = createServer(async (request, response) => {
@@ -45,7 +68,7 @@ const server = createServer(async (request, response) => {
   //         ...request.headers,
   //         "x-github-token": "REDACTED",
   //       },
-  //       body: input,
+  //       body: payload,
   //     },
   //     null,
   //     2
@@ -72,7 +95,37 @@ const server = createServer(async (request, response) => {
   const userConfirmation = getUserConfirmation(payload);
   const userMessage = getUserMessage(payload);
 
-  if (userConfirmation) {
+  const result = await prompt({
+    model: "gpt-4",
+    token: tokenForUser,
+    messages: payload.messages,
+    tools: functions,
+  });
+
+  const [functionCall] = getFunctionCalls(result);
+
+  if (functionCall) {
+    // simulate function call
+    const args = JSON.parse(functionCall.function.arguments);
+    const functionCallResultMessage = {
+      // role: "tool",
+      role: "system",
+      content: JSON.stringify({
+        order_id: args.order_id,
+        delivery_date: "2024-12-24",
+      }),
+    };
+    const result = await prompt({
+      model: "gpt-4",
+      token: tokenForUser,
+      messages: [...payload.messages, functionCallResultMessage],
+      tools: functions,
+    });
+
+    console.log(JSON.stringify(result, null, 2));
+
+    response.write(createTextEvent(result.message.content).toString());
+  } else if (userConfirmation) {
     // send text acknoledging the confirmation choice
     response.write(
       createTextEvent(
@@ -151,13 +204,12 @@ const server = createServer(async (request, response) => {
     console.log("Confirmation response sent");
   } else {
     // send a text message
-    response.write(createTextEvent(`Hello, @${user.login}!`).toString());
+    response.write(createTextEvent(result.message.content).toString());
     console.log("Text response sent");
   }
 
   // close the connection
   response.end(createDoneEvent().toString());
-
   console.log("Socket closed");
 });
 
@@ -176,5 +228,25 @@ function getBody(request) {
         body = Buffer.concat(bodyParts).toString();
         resolve(body);
       });
+  });
+}
+
+/**
+ * @param {import("@copilot-extensions/preview-sdk").PromptResult} payload
+ * @returns {{id: string, function: {name: string, arguments: string}}[]}
+ */
+export function getFunctionCalls(payload) {
+  const functionCalls = payload.message.tool_calls;
+
+  if (!functionCalls) return [];
+
+  return functionCalls.map((call) => {
+    return {
+      id: call.id,
+      function: {
+        name: call.function.name,
+        arguments: call.function.arguments,
+      },
+    };
   });
 }
