@@ -13,6 +13,7 @@ import {
   verifyAndParseRequest,
   getUserMessage,
   getUserConfirmation,
+  getFunctionCalls,
   prompt,
 } from "@copilot-extensions/preview-sdk";
 
@@ -108,7 +109,8 @@ const server = createServer(async (request, response) => {
     // simulate function call
     const args = JSON.parse(functionCall.function.arguments);
     const functionCallResultMessage = {
-      // role: "tool",
+      // CAPI currently does not accept `role: "function"` or `role: "tool"
+      // role: "function",
       role: "system",
       content: JSON.stringify({
         order_id: args.order_id,
@@ -228,25 +230,5 @@ function getBody(request) {
         body = Buffer.concat(bodyParts).toString();
         resolve(body);
       });
-  });
-}
-
-/**
- * @param {import("@copilot-extensions/preview-sdk").PromptResult} payload
- * @returns {{id: string, function: {name: string, arguments: string}}[]}
- */
-export function getFunctionCalls(payload) {
-  const functionCalls = payload.message.tool_calls;
-
-  if (!functionCalls) return [];
-
-  return functionCalls.map((call) => {
-    return {
-      id: call.id,
-      function: {
-        name: call.function.name,
-        arguments: call.function.arguments,
-      },
-    };
   });
 }
