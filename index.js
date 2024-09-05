@@ -58,7 +58,7 @@ const server = createServer(async (request, response) => {
     keyID,
     {
       token: tokenForUser,
-    }
+    },
   );
 
   // debug log
@@ -85,7 +85,7 @@ const server = createServer(async (request, response) => {
   console.log("Request verified and parsed");
 
   // Acknowledge the request
-  response.write(createAckEvent().toString());
+  response.write(createAckEvent());
   console.log("Request acknowledged");
 
   // get user info
@@ -126,19 +126,19 @@ const server = createServer(async (request, response) => {
 
     console.log(JSON.stringify(result, null, 2));
 
-    response.write(createTextEvent(result.message.content).toString());
+    response.write(createTextEvent(result.message.content));
   } else if (userConfirmation) {
     // send text acknoledging the confirmation choice
     response.write(
       createTextEvent(
         `ok, @${user.login}, ${
           userConfirmation.accepted ? "accepted" : "dismissed"
-        }!`
-      ).toString()
+        }!`,
+      ),
     );
     console.log(
       "Text response acknowledged the confirmation choice sent",
-      userConfirmation
+      userConfirmation,
     );
   } else if (/confirm/i.test(userMessage)) {
     // send a confirmation message
@@ -147,12 +147,12 @@ const server = createServer(async (request, response) => {
         title: `Are you @${user.login}?`,
         message: "Just making sure",
         id: "1",
-      }).toString()
+      }),
     );
     console.log("Confirmation response sent");
   } else if (/reference/i.test(userMessage)) {
     response.write(
-      createTextEvent(`ok, @${user.login}, a reference is incoming:`).toString()
+      createTextEvent(`ok, @${user.login}, a reference is incoming:`),
     );
     // send a reference
     response.write(
@@ -173,12 +173,12 @@ const server = createServer(async (request, response) => {
             display_url: "http://blackbeard.com/story/1",
           },
         },
-      ]).toString()
+      ]),
     );
     console.log("Reference response sent");
   } else if (/error/i.test(userMessage)) {
     response.write(
-      createTextEvent(`ok, @${user.login}, here are some errors:`).toString()
+      createTextEvent(`ok, @${user.login}, here are some errors:`),
     );
     // send errors
     const referenceError = {
@@ -201,17 +201,17 @@ const server = createServer(async (request, response) => {
     };
     response.write(
       // @ts-expect-error
-      createErrorsEvent([referenceError, functionError, agentError]).toString()
+      createErrorsEvent([referenceError, functionError, agentError]),
     );
     console.log("Confirmation response sent");
   } else {
     // send a text message
-    response.write(createTextEvent(result.message.content).toString());
+    response.write(createTextEvent(result.message.content));
     console.log("Text response sent");
   }
 
   // close the connection
-  response.end(createDoneEvent().toString());
+  response.end(createDoneEvent());
   console.log("Socket closed");
 });
 
@@ -227,7 +227,7 @@ function getBody(request) {
         bodyParts.push(chunk);
       })
       .on("end", () => {
-        body = Buffer.concat(bodyParts).toString();
+        body = Buffer.concat(bodyParts);
         resolve(body);
       });
   });
