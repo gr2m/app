@@ -227,7 +227,7 @@ function getBody(request) {
         bodyParts.push(chunk);
       })
       .on("end", () => {
-        body = Buffer.concat(bodyParts);
+        body = Buffer.concat(bodyParts).toString();
         resolve(body);
       });
   });
